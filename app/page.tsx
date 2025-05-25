@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Box, Container, Button } from '@mui/material';
+import { Box, Container, Button, CircularProgress } from '@mui/material';
+import { getMockDogs } from './mock/dogs';
+import type { DogImage } from './types/api';
 
 const searchBoxStyles = {
   border: '2px solid #000000',
@@ -64,7 +67,40 @@ const tabBarStyles = {
 };
 
 export default function Home() {
-  const images = Array.from({ length: 15 }, (_, i) => `/images/dog${i + 1}.jpg`);
+  const [images, setImages] = useState<DogImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDogs = async () => {
+      try {
+        setLoading(true);
+        const result = await getMockDogs(15);
+        setImages(result.images);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch images');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDogs();
+  }, []);
+
+  const handleSeeMore = async () => {
+    try {
+      setLoading(true);
+      const currentLength = images.length;
+      const result = await getMockDogs(currentLength + 15);
+      setImages(result.images);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch more images');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ pb: '83px' }}>
@@ -90,6 +126,12 @@ export default function Home() {
           <span className="all-results">all results</span>
         </Box>
 
+        {error && (
+          <Box sx={{ color: 'error.main', mb: 2, textAlign: 'center' }}>
+            {error}
+          </Box>
+        )}
+
         <Box sx={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(3, 1fr)', 
@@ -100,15 +142,25 @@ export default function Home() {
             height: '107px',
           }
         }}>
-          {images.map((image, index) => (
-            <Box key={index}>
-              <Image src={image} alt={`Dog ${index + 1}`} fill style={{ objectFit: 'cover' }} />
+          {images.map((image) => (
+            <Box key={image.id}>
+              <Image
+                src={image.url}
+                alt={`Dog ${image.id}`}
+                fill
+                style={{ objectFit: 'cover' }}
+              />
             </Box>
           ))}
         </Box>
 
-        <Button variant="outlined" sx={seeMoreButtonStyles}>
-          see more
+        <Button
+          variant="outlined"
+          sx={seeMoreButtonStyles}
+          onClick={handleSeeMore}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={20} /> : 'see more'}
         </Button>
       </Container>
 
